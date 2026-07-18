@@ -115,6 +115,8 @@ function renderApplications(apps) {
       ? `${escapeHtml(a.dateFromBS)} &rarr; ${escapeHtml(a.dateToBS)}`
       : `${formatDate(a.dateFrom)} &rarr; ${formatDate(a.dateTo)}`;
 
+    const durationLabel = leaveDurationLabel(a.dateFrom, a.dateTo);
+
     card.innerHTML = `
       <div class="app-card-body">
         ${photoHtml}
@@ -124,7 +126,7 @@ function renderApplications(apps) {
             <span class="app-card-meta">Roll ${escapeHtml(a.roll)} &middot; ${escapeHtml(a.className)}-${escapeHtml(a.section)}</span>
           </div>
           ${statusBadge}
-          <div class="app-card-dates">${datesLabel}</div>
+          <div class="app-card-dates">${datesLabel}${durationLabel ? ` <span class="app-card-duration">${durationLabel}</span>` : ""}</div>
           <span class="app-card-reason-type">${escapeHtml(a.reasonType)}</span>
           <p class="app-card-details">${escapeHtml(a.reasonDetails)}</p>
           <div class="app-card-contact">Guardian contact: ${escapeHtml(a.guardianContact)}</div>
@@ -133,6 +135,15 @@ function renderApplications(apps) {
     `;
     el.appList.appendChild(card);
   });
+}
+
+function leaveDurationLabel(dateFromIso, dateToIso) {
+  if (!dateFromIso || !dateToIso) return "";
+  const from = new Date(dateFromIso);
+  const to = new Date(dateToIso);
+  if (isNaN(from) || isNaN(to) || to < from) return "";
+  const dayCount = Math.round((to - from) / 86400000) + 1;
+  return `${dayCount} day${dayCount === 1 ? "" : "s"}`;
 }
 
 function formatDate(iso) {

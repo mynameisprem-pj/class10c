@@ -51,6 +51,7 @@ const els = {
   stuSection: document.getElementById("stuSection"),
   dateFromError: document.getElementById("dateFromError"),
   dateToError: document.getElementById("dateToError"),
+  leaveDuration: document.getElementById("leaveDuration"),
   submitBtn: document.getElementById("submitBtn")
 };
 
@@ -196,6 +197,14 @@ function validateDates() {
     valid = false;
   }
 
+  if (valid) {
+    const dayCount = Math.round((toAd - fromAd) / 86400000) + 1;
+    els.leaveDuration.textContent = `Leave for ${dayCount} day${dayCount === 1 ? "" : "s"}`;
+    els.leaveDuration.hidden = false;
+  } else {
+    els.leaveDuration.hidden = true;
+  }
+
   state.datesValid = valid;
   updateSubmitAvailability();
 }
@@ -275,11 +284,15 @@ function resetWizard() {
   els.verifyBadge.innerHTML = "";
 
   [els.stuName, els.stuRoll, els.stuClass, els.stuSection].forEach((f) => (f.value = ""));
-  populateBsDateSelects("dateFrom");
-  populateBsDateSelects("dateTo");
+  const ready = initBsDatePicker("dateFrom") && initBsDatePicker("dateTo");
   els.dateFromError.hidden = true;
   els.dateToError.hidden = true;
-  state.datesValid = true;
+  els.leaveDuration.hidden = true;
+  state.datesValid = ready;
+  if (!ready) {
+    els.dateFromError.textContent = "Couldn't load the calendar. Please check your internet connection and refresh the page.";
+    els.dateFromError.hidden = false;
+  }
   document.getElementById("reasonType").value = "";
   document.getElementById("reasonDetails").value = "";
   document.getElementById("guardianContact").value = "";
@@ -304,6 +317,12 @@ els.fileInput.addEventListener("change", handleFileUpload);
 els.submitBtn.addEventListener("click", submitApplication);
 document.getElementById("restartBtn").addEventListener("click", resetWizard);
 
-populateBsDateSelects("dateFrom");
-populateBsDateSelects("dateTo");
-state.datesValid = true;
+const bsPickersReady = initBsDatePicker("dateFrom") && initBsDatePicker("dateTo");
+if (bsPickersReady) {
+  state.datesValid = true;
+} else {
+  state.datesValid = false;
+  els.dateFromError.textContent = "Couldn't load the calendar. Please check your internet connection and refresh the page.";
+  els.dateFromError.hidden = false;
+  updateSubmitAvailability();
+}

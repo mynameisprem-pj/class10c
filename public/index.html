@@ -87,23 +87,19 @@
         <div class="field-grid">
           <div class="field bs-date-field">
             <span>Leave from (B.S.)</span>
-            <div class="bs-date-selects">
-              <select id="dateFromDay"></select>
-              <select id="dateFromMonth"></select>
-              <select id="dateFromYear"></select>
-            </div>
+            <input type="text" id="dateFromInput" class="bs-date-input" readonly placeholder="Select date" autocomplete="off">
+            <div class="bs-calendar-popover" id="dateFromPopover" hidden></div>
             <p class="error-text" id="dateFromError" hidden></p>
           </div>
           <div class="field bs-date-field">
             <span>Leave to (B.S.)</span>
-            <div class="bs-date-selects">
-              <select id="dateToDay"></select>
-              <select id="dateToMonth"></select>
-              <select id="dateToYear"></select>
-            </div>
+            <input type="text" id="dateToInput" class="bs-date-input" readonly placeholder="Select date" autocomplete="off">
+            <div class="bs-calendar-popover" id="dateToPopover" hidden></div>
             <p class="error-text" id="dateToError" hidden></p>
           </div>
         </div>
+
+        <p class="leave-duration" id="leaveDuration" hidden></p>
 
         <label class="field full">
           <span>Reason</span>
@@ -145,7 +141,13 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nepali-date-converter/dist/nepali-date-converter.umd.js"></script>
+  <script src="js/nepali-date-converter.umd.js"></script>
+  <script>
+    // The library's own CDN instructions are misleading for plain <script> tags:
+    // it actually attaches an { default: NepaliDate, dateConfigMap } object to
+    // window.NepaliDate, not the class itself. Unwrap it once, here.
+    window.NepaliDate = window.NepaliDate.default;
+  </script>
   <script src="js/ocr.js"></script>
   <script src="js/bsdate.js"></script>
   <script src="js/app.js"></script>

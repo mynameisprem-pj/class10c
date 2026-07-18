@@ -1,15 +1,12 @@
-// Uses the global `NepaliDate` class from nepali-date-converter (loaded via CDN)
-// to power a plain year/month/day select picker for the Bikram Sambat calendar,
-// since browsers only support Gregorian dates in native <input type="date">.
+// Single-box Bikram Sambat date picker, backed by the self-hosted
+// nepali-date-converter library (see index.html for the load + unwrap step).
 
 const BS_MONTH_NAMES = [
   "Baisakh", "Jestha", "Asar", "Shrawan", "Bhadra", "Aswin",
   "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
 ];
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-// Works out how many days are in a given BS month by converting the 1st of
-// that month and the 1st of the next month to AD, and measuring the gap —
-// avoids needing to hardcode a Nepali calendar data table ourselves.
 function daysInBsMonth(year, monthIndex) {
   const nextMonthIndex = (monthIndex + 1) % 12;
   const nextYear = monthIndex === 11 ? year + 1 : year;
@@ -30,67 +27,105 @@ function bsDateLabel(year, monthIndex, day) {
   return `${day} ${BS_MONTH_NAMES[monthIndex]} ${year}`;
 }
 
-function populateBsDateSelects(prefix) {
-  const yearSel = document.getElementById(`${prefix}Year`);
-  const monthSel = document.getElementById(`${prefix}Month`);
-  const daySel = document.getElementById(`${prefix}Day`);
+const bsPickerState = {};
 
-  const today = NepaliDate.now();
-  const currentYear = today.getYear();
+function initBsDatePicker(prefix) {
+  const input = document.getElementById(`${prefix}Input`);
+  const popover = document.getElementById(`${prefix}Popover`);
 
-  yearSel.innerHTML = "";
-  [currentYear, currentYear + 1].forEach((y) => {
-    const opt = document.createElement("option");
-    opt.value = String(y);
-    opt.textContent = String(y);
-    yearSel.appendChild(opt);
-  });
-
-  monthSel.innerHTML = "";
-  BS_MONTH_NAMES.forEach((name, idx) => {
-    const opt = document.createElement("option");
-    opt.value = String(idx);
-    opt.textContent = name;
-    monthSel.appendChild(opt);
-  });
-
-  function refreshDays(preserveDay) {
-    const y = Number(yearSel.value);
-    const m = Number(monthSel.value);
-    const total = daysInBsMonth(y, m);
-    const prevValue = preserveDay ? Number(daySel.value) || 1 : 1;
-    daySel.innerHTML = "";
-    for (let d = 1; d <= total; d++) {
-      const opt = document.createElement("option");
-      opt.value = String(d);
-      opt.textContent = String(d);
-      daySel.appendChild(opt);
-    }
-    daySel.value = String(Math.min(prevValue, total));
+  if (typeof NepaliDate === "undefined" || typeof NepaliDate !== "function") {
+    console.error("NepaliDate library did not load correctly.");
+    input.value = "Calendar unavailable";
+    input.disabled = true;
+    return false;
   }
 
-  yearSel.addEventListener("change", () => {
-    refreshDays(true);
-    yearSel.dispatchEvent(new Event("bsdatechange", { bubbles: true }));
-  });
-  monthSel.addEventListener("change", () => {
-    refreshDays(true);
-    monthSel.dispatchEvent(new Event("bsdatechange", { bubbles: true }));
-  });
-  daySel.addEventListener("change", () => {
-    daySel.dispatchEvent(new Event("bsdatechange", { bubbles: true }));
+  const today = NepaliDate.now();
+  const picked = { year: today.getYear(), month: today.getMonth(), day: today.getDate() };
+  const view = { year: today.getYear(), month: today.getMonth() };
+  bsPickerState[prefix] = picked;
+
+  input.value = bsDateLabel(picked.year, picked.month, picked.day);
+
+  function render() {
+    const totalDays = daysInBsMonth(view.year, view.month);
+    const firstOfMonthAd = new NepaliDate(view.year, view.month, 1).toJsDate();
+    const startWeekday = firstOfMonthAd.getDay(); // 0 = Sunday
+
+    let html = `
+      <div class="bs-cal-header">
+        <button type="button" class="bs-cal-nav" data-nav="-1">&lsaquo;</button>
+        <span class="bs-cal-title">${BS_MONTH_NAMES[view.month]} ${view.year}</span>
+        <button type="button" class="bs-cal-nav" data-nav="1">&rsaquo;</button>
+      </div>
+      <div class="bs-cal-weekdays">${WEEKDAY_LABELS.map((d) => `<span>${d}</span>`).join("")}</div>
+      <div class="bs-cal-grid">
+    `;
+
+    for (let i = 0; i < startWeekday; i++) {
+      html += `<button type="button" class="bs-day empty" disabled></button>`;
+    }
+
+    const todayAd = new Date();
+    todayAd.setHours(0, 0, 0, 0);
+
+    for (let d = 1; d <= totalDays; d++) {
+      const thisAd = new NepaliDate(view.year, view.month, d).toJsDate();
+      const isPast = thisAd < todayAd;
+      const isToday = thisAd.getTime() === todayAd.getTime();
+      const isSelected = picked.year === view.year && picked.month === view.month && picked.day === d;
+      const classes = ["bs-day"];
+      if (isToday) classes.push("today");
+      if (isSelected) classes.push("selected");
+      html += `<button type="button" class="${classes.join(" ")}" data-day="${d}" ${isPast ? "disabled" : ""}>${d}</button>`;
+    }
+
+    html += `</div>`;
+    popover.innerHTML = html;
+
+    popover.querySelector('[data-nav="-1"]').addEventListener("click", () => {
+      view.month -= 1;
+      if (view.month < 0) { view.month = 11; view.year -= 1; }
+      render();
+    });
+    popover.querySelector('[data-nav="1"]').addEventListener("click", () => {
+      view.month += 1;
+      if (view.month > 11) { view.month = 0; view.year += 1; }
+      render();
+    });
+    popover.querySelectorAll(".bs-day[data-day]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        picked.year = view.year;
+        picked.month = view.month;
+        picked.day = Number(btn.dataset.day);
+        input.value = bsDateLabel(picked.year, picked.month, picked.day);
+        popover.hidden = true;
+        input.dispatchEvent(new Event("bsdatechange", { bubbles: true }));
+      });
+    });
+  }
+
+  input.addEventListener("click", () => {
+    document.querySelectorAll(".bs-calendar-popover").forEach((p) => {
+      if (p !== popover) p.hidden = true;
+    });
+    view.year = picked.year;
+    view.month = picked.month;
+    render();
+    popover.hidden = !popover.hidden;
   });
 
-  yearSel.value = String(today.getYear());
-  monthSel.value = String(today.getMonth());
-  refreshDays(false);
-  daySel.value = String(today.getDate());
+  document.addEventListener("click", (e) => {
+    if (!popover.hidden && !popover.contains(e.target) && e.target !== input) {
+      popover.hidden = true;
+    }
+  });
+
+  render();
+  input.dispatchEvent(new Event("bsdatechange", { bubbles: true }));
+  return true;
 }
 
 function getSelectedBsDate(prefix) {
-  return {
-    year: Number(document.getElementById(`${prefix}Year`).value),
-    month: Number(document.getElementById(`${prefix}Month`).value),
-    day: Number(document.getElementById(`${prefix}Day`).value)
-  };
+  return bsPickerState[prefix];
 }

@@ -312,28 +312,119 @@ h1 {
   height: 16px;
 }
 
+.bs-date-field {
+  position: relative;
+}
 .bs-date-field span {
   display: block;
   margin-bottom: 6px;
 }
-.bs-date-selects {
-  display: flex;
-  gap: 6px;
-}
-.bs-date-selects select {
+.bs-date-input {
+  width: 100%;
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14.5px;
   color: var(--ink);
-  padding: 9px 6px;
+  padding: 10px 12px;
   border-radius: 7px;
   border: 1.5px solid var(--border);
   background: var(--paper);
-  flex: 1;
-  min-width: 0;
+  cursor: pointer !important;
 }
-.bs-date-selects select:focus {
+.bs-date-input:focus {
   outline: none;
   border-color: var(--gold);
+}
+
+.bs-calendar-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: 264px;
+  max-width: 90vw;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(20, 33, 61, 0.18);
+  padding: 12px;
+}
+.bs-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bs-cal-nav {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--navy);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.bs-cal-nav:hover {
+  background: var(--paper);
+}
+.bs-cal-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.bs-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.bs-cal-weekdays span {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  text-align: center;
+  font-weight: 600;
+}
+.bs-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.bs-day {
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.bs-day:hover:not(:disabled) {
+  background: var(--paper);
+}
+.bs-day.today {
+  border: 1.5px solid var(--gold);
+}
+.bs-day.selected {
+  background: var(--navy);
+  color: #fff;
+}
+.bs-day:disabled {
+  color: var(--border);
+  cursor: not-allowed;
+}
+.bs-day.empty {
+  visibility: hidden;
+}
+
+.leave-duration {
+  display: inline-block;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  margin: -6px 0 18px;
 }
 
 .applicant-chip {
