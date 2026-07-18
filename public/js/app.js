@@ -174,6 +174,18 @@ function validateDates() {
 
   const from = getSelectedBsDate("dateFrom");
   const to = getSelectedBsDate("dateTo");
+
+  // SAFTEY GUARD: If the dates haven't been picked yet, hide everything and stop here!
+  if (!from || !to || !from.year || !to.year) {
+    els.dateFromError.hidden = true;
+    els.dateToError.hidden = true;
+    els.leaveDuration.hidden = true;
+    state.datesValid = false;
+    updateSubmitAvailability();
+    return; // Exits the function cleanly before it can crash
+  }
+
+  // These are now safe to run because we proved 'from' and 'to' exist above
   const fromAd = new Date(bsDateToAdIso(from.year, from.month, from.day));
   const toAd = new Date(bsDateToAdIso(to.year, to.month, to.day));
 
