@@ -4,6 +4,9 @@ const el = {
   loginPanel: document.getElementById("loginPanel"),
   dashboardPanel: document.getElementById("dashboardPanel"),
   passwordInput: document.getElementById("passwordInput"),
+  eyeToggle: document.getElementById("eyeToggle"),
+  eyeIconOpen: document.getElementById("eyeIconOpen"),
+  eyeIconClosed: document.getElementById("eyeIconClosed"),
   loginBtn: document.getElementById("loginBtn"),
   loginError: document.getElementById("loginError"),
   logoutBtn: document.getElementById("logoutBtn"),
@@ -122,6 +125,16 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function togglePasswordVisibility() {
+  const isHidden = el.passwordInput.type === "password";
+  el.passwordInput.type = isHidden ? "text" : "password";
+  el.eyeIconOpen.hidden = isHidden;
+  el.eyeIconClosed.hidden = !isHidden;
+  el.eyeToggle.setAttribute("aria-pressed", String(isHidden));
+  el.eyeToggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+}
+
+el.eyeToggle.addEventListener("click", togglePasswordVisibility);
 el.loginBtn.addEventListener("click", login);
 el.passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") login();

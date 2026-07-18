@@ -1,3 +1,35 @@
+.password-wrap {
+  position: relative;
+  display: flex;
+}
+.password-wrap input {
+  width: 100%;
+  padding-right: 42px;
+}
+.eye-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.eye-toggle:hover {
+  color: var(--navy);
+  background: var(--border);
+}
+.eye-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
 .dash-header {
   display: flex;
   align-items: baseline;

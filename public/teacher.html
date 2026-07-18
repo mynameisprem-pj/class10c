@@ -27,7 +27,20 @@
       <p class="hint">Enter the password to view leave applications.</p>
       <label class="field full">
         <span>Password</span>
-        <input type="password" id="passwordInput" autocomplete="current-password">
+        <div class="password-wrap">
+          <input type="password" id="passwordInput" autocomplete="current-password">
+          <button type="button" class="eye-toggle" id="eyeToggle" aria-label="Show password" aria-pressed="false">
+            <svg id="eyeIconOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg id="eyeIconClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" hidden>
+              <path d="M3 3l18 18"/>
+              <path d="M10.6 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.1 3.9M6.6 6.6C3.4 8.6 1.5 12 1.5 12s3.5 7 10.5 7a10.1 10.1 0 0 0 5.4-1.6"/>
+              <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+            </svg>
+          </button>
+        </div>
       </label>
       <p class="error-text" id="loginError" hidden></p>
       <div class="actions">
