@@ -39,6 +39,8 @@ module.exports = async (req, res) => {
     section: String(body.section).slice(0, 10),
     dateFrom: body.dateFrom,
     dateTo: body.dateTo,
+    dateFromBS: typeof body.dateFromBS === "string" ? body.dateFromBS.slice(0, 40) : null,
+    dateToBS: typeof body.dateToBS === "string" ? body.dateToBS.slice(0, 40) : null,
     reasonType: body.reasonType,
     reasonDetails: String(body.reasonDetails).slice(0, 1000),
     guardianContact: String(body.guardianContact).slice(0, 20),

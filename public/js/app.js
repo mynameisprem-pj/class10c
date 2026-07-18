@@ -7,7 +7,8 @@ const state = {
   photoDataUrl: null,
   thumbnailDataUrl: null,
   stream: null,
-  verified: false
+  verified: false,
+  datesValid: false
 };
 
 function createThumbnail(imageSrc, maxWidth = 480) {
@@ -48,6 +49,8 @@ const els = {
   stuRoll: document.getElementById("stuRoll"),
   stuClass: document.getElementById("stuClass"),
   stuSection: document.getElementById("stuSection"),
+  dateFromError: document.getElementById("dateFromError"),
+  dateToError: document.getElementById("dateToError"),
   submitBtn: document.getElementById("submitBtn")
 };
 
@@ -159,8 +162,48 @@ function applyVerificationUi(allFieldsFound, classMatches, sectionMatches) {
   updateSubmitAvailability();
 }
 
+function todayAdStartOfDay() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function validateDates() {
+  const today = todayAdStartOfDay();
+
+  const from = getSelectedBsDate("dateFrom");
+  const to = getSelectedBsDate("dateTo");
+  const fromAd = new Date(bsDateToAdIso(from.year, from.month, from.day));
+  const toAd = new Date(bsDateToAdIso(to.year, to.month, to.day));
+
+  els.dateFromError.hidden = true;
+  els.dateToError.hidden = true;
+  let valid = true;
+
+  if (fromAd < today) {
+    els.dateFromError.textContent = "This date has already passed. Please choose today or a future date.";
+    els.dateFromError.hidden = false;
+    valid = false;
+  }
+
+  if (toAd < today) {
+    els.dateToError.textContent = "This date has already passed. Please choose today or a future date.";
+    els.dateToError.hidden = false;
+    valid = false;
+  } else if (toAd < fromAd) {
+    els.dateToError.textContent = "\"Leave to\" can't be before \"Leave from\".";
+    els.dateToError.hidden = false;
+    valid = false;
+  }
+
+  state.datesValid = valid;
+  updateSubmitAvailability();
+}
+
+document.addEventListener("bsdatechange", validateDates);
+
 function updateSubmitAvailability() {
-  els.submitBtn.disabled = !state.verified;
+  els.submitBtn.disabled = !(state.verified && state.datesValid);
 }
 
 async function submitApplication() {
@@ -168,14 +211,23 @@ async function submitApplication() {
     alert("Your ID card couldn't be verified. Please scan it before submitting.");
     return;
   }
+  if (!state.datesValid) {
+    alert("Please choose valid leave dates (today or a future date) before submitting.");
+    return;
+  }
+
+  const from = getSelectedBsDate("dateFrom");
+  const to = getSelectedBsDate("dateTo");
 
   const payload = {
     name: els.stuName.value.trim(),
     roll: els.stuRoll.value.trim(),
     className: els.stuClass.value.trim(),
     section: els.stuSection.value.trim(),
-    dateFrom: document.getElementById("dateFrom").value,
-    dateTo: document.getElementById("dateTo").value,
+    dateFrom: bsDateToAdIso(from.year, from.month, from.day),
+    dateTo: bsDateToAdIso(to.year, to.month, to.day),
+    dateFromBS: bsDateLabel(from.year, from.month, from.day),
+    dateToBS: bsDateLabel(to.year, to.month, to.day),
     reasonType: document.getElementById("reasonType").value,
     reasonDetails: document.getElementById("reasonDetails").value.trim(),
     guardianContact: document.getElementById("guardianContact").value.trim(),
@@ -206,7 +258,7 @@ async function submitApplication() {
   } catch (err) {
     alert("Couldn't send the application. Please check your connection and try again.");
   } finally {
-    els.submitBtn.disabled = !state.verified;
+    els.submitBtn.disabled = !(state.verified && state.datesValid);
     els.submitBtn.textContent = "Send application";
   }
 }
@@ -223,8 +275,11 @@ function resetWizard() {
   els.verifyBadge.innerHTML = "";
 
   [els.stuName, els.stuRoll, els.stuClass, els.stuSection].forEach((f) => (f.value = ""));
-  document.getElementById("dateFrom").value = "";
-  document.getElementById("dateTo").value = "";
+  populateBsDateSelects("dateFrom");
+  populateBsDateSelects("dateTo");
+  els.dateFromError.hidden = true;
+  els.dateToError.hidden = true;
+  state.datesValid = true;
   document.getElementById("reasonType").value = "";
   document.getElementById("reasonDetails").value = "";
   document.getElementById("guardianContact").value = "";
@@ -248,3 +303,7 @@ els.uploadBtn.addEventListener("click", () => els.fileInput.click());
 els.fileInput.addEventListener("change", handleFileUpload);
 els.submitBtn.addEventListener("click", submitApplication);
 document.getElementById("restartBtn").addEventListener("click", resetWizard);
+
+populateBsDateSelects("dateFrom");
+populateBsDateSelects("dateTo");
+state.datesValid = true;

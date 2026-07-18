@@ -111,6 +111,10 @@ function renderApplications(apps) {
       ? `<img class="app-card-photo" src="${a.idPhoto}" alt="ID card photo for ${escapeHtml(a.name)}">`
       : `<div class="app-card-photo app-card-photo-missing">No photo</div>`;
 
+    const datesLabel = a.dateFromBS && a.dateToBS
+      ? `${escapeHtml(a.dateFromBS)} &rarr; ${escapeHtml(a.dateToBS)}`
+      : `${formatDate(a.dateFrom)} &rarr; ${formatDate(a.dateTo)}`;
+
     card.innerHTML = `
       <div class="app-card-body">
         ${photoHtml}
@@ -120,7 +124,7 @@ function renderApplications(apps) {
             <span class="app-card-meta">Roll ${escapeHtml(a.roll)} &middot; ${escapeHtml(a.className)}-${escapeHtml(a.section)}</span>
           </div>
           ${statusBadge}
-          <div class="app-card-dates">${formatDate(a.dateFrom)} &rarr; ${formatDate(a.dateTo)}</div>
+          <div class="app-card-dates">${datesLabel}</div>
           <span class="app-card-reason-type">${escapeHtml(a.reasonType)}</span>
           <p class="app-card-details">${escapeHtml(a.reasonDetails)}</p>
           <div class="app-card-contact">Guardian contact: ${escapeHtml(a.guardianContact)}</div>

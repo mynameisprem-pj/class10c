@@ -15,6 +15,10 @@
 
 * { box-sizing: border-box; }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--paper);
@@ -306,6 +310,30 @@ h1 {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+}
+
+.bs-date-field span {
+  display: block;
+  margin-bottom: 6px;
+}
+.bs-date-selects {
+  display: flex;
+  gap: 6px;
+}
+.bs-date-selects select {
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  padding: 9px 6px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: var(--paper);
+  flex: 1;
+  min-width: 0;
+}
+.bs-date-selects select:focus {
+  outline: none;
+  border-color: var(--gold);
 }
 
 .applicant-chip {
