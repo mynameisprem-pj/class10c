@@ -1,7 +1,29 @@
+const CONFIG = {
+  expectedClass: "10",
+  expectedSection: "C"
+};
+
 const state = {
   photoDataUrl: null,
-  stream: null
+  thumbnailDataUrl: null,
+  stream: null,
+  verified: false
 };
+
+function createThumbnail(imageSrc, maxWidth = 480) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.src = imageSrc;
+  });
+}
 
 const els = {
   panels: {
@@ -25,7 +47,11 @@ const els = {
   stuClass: document.getElementById("stuClass"),
   stuSection: document.getElementById("stuSection"),
   applicantChip: document.getElementById("applicantChip"),
-  submitBtn: document.getElementById("submitBtn")
+  submitBtn: document.getElementById("submitBtn"),
+  verifyBadge: document.getElementById("verifyBadge"),
+  manualConfirmRow: document.getElementById("manualConfirmRow"),
+  manualConfirmCheckbox: document.getElementById("manualConfirmCheckbox"),
+  toStep3Btn: document.getElementById("toStep3")
 };
 
 function goToStep(stepKey) {
@@ -75,6 +101,7 @@ function captureFrame() {
   els.video.hidden = true;
   stopCamera();
 
+  createThumbnail(state.photoDataUrl).then((thumb) => (state.thumbnailDataUrl = thumb));
   runOcr(state.photoDataUrl);
 }
 
@@ -88,6 +115,7 @@ function handleFileUpload(e) {
     els.previewImg.hidden = false;
     els.video.hidden = true;
     stopCamera();
+    createThumbnail(state.photoDataUrl).then((thumb) => (state.thumbnailDataUrl = thumb));
     runOcr(state.photoDataUrl);
   };
   reader.readAsDataURL(file);
@@ -98,24 +126,61 @@ async function runOcr(imageDataUrl) {
   els.captureBtn.disabled = true;
   els.uploadBtn.disabled = true;
 
+  let extracted = { name: "", roll: "", className: "", section: "" };
   try {
-    const extracted = await runOcrOnImage(imageDataUrl);
-
-    els.stuName.value = extracted.name || "";
-    els.stuRoll.value = extracted.roll || "";
-    els.stuClass.value = extracted.className || "";
-    els.stuSection.value = extracted.section || "";
-
-    els.ocrStatusText.textContent = "Done reading card. Please check the details.";
-    setTimeout(() => goToStep(2), 400);
+    extracted = await runOcrOnImage(imageDataUrl);
   } catch (err) {
-    els.ocrStatusText.textContent = "Couldn't read the card automatically — please retake the photo or fill details manually.";
-    setTimeout(() => goToStep(2), 900);
+    // fall through with empty fields — handled as unverified below
   } finally {
     els.captureBtn.disabled = false;
     els.uploadBtn.disabled = false;
   }
+
+  els.stuName.value = extracted.name || "";
+  els.stuRoll.value = extracted.roll || "";
+  els.stuClass.value = extracted.className || "";
+  els.stuSection.value = extracted.section || "";
+
+  const allFieldsFound = extracted.name && extracted.roll && extracted.className && extracted.section;
+  const classMatches = extracted.className === CONFIG.expectedClass;
+  const sectionMatches = extracted.section === CONFIG.expectedSection;
+  state.verified = Boolean(allFieldsFound && classMatches && sectionMatches);
+
+  applyVerificationUi(extracted, allFieldsFound, classMatches, sectionMatches);
+
+  els.ocrStatusText.textContent = state.verified
+    ? "Card read successfully."
+    : "Couldn't fully verify the card — check the details below.";
+  setTimeout(() => goToStep(2), state.verified ? 400 : 700);
 }
+
+function applyVerificationUi(extracted, allFieldsFound, classMatches, sectionMatches) {
+  const fields = [els.stuName, els.stuRoll, els.stuClass, els.stuSection];
+
+  if (state.verified) {
+    fields.forEach((f) => (f.readOnly = true));
+    els.verifyBadge.className = "verify-badge ok";
+    els.verifyBadge.innerHTML = "✓ Read automatically from your ID card. These fields are locked — rescan if something looks wrong.";
+    els.manualConfirmRow.hidden = true;
+    els.manualConfirmCheckbox.checked = false;
+    els.toStep3Btn.disabled = false;
+  } else {
+    fields.forEach((f) => (f.readOnly = false));
+    els.verifyBadge.className = "verify-badge warn";
+    if (!allFieldsFound) {
+      els.verifyBadge.innerHTML = "⚠ Couldn't read some details from the card. Fill them in carefully — this application will be marked as manually entered.";
+    } else if (!classMatches || !sectionMatches) {
+      els.verifyBadge.innerHTML = `⚠ This card doesn't show Class ${CONFIG.expectedClass}, Section ${CONFIG.expectedSection}. Double-check the fields, or rescan — this application will be marked as manually entered.`;
+    }
+    els.manualConfirmRow.hidden = false;
+    els.manualConfirmCheckbox.checked = false;
+    els.toStep3Btn.disabled = true;
+  }
+}
+
+els.manualConfirmCheckbox?.addEventListener("change", () => {
+  els.toStep3Btn.disabled = !els.manualConfirmCheckbox.checked;
+});
 
 function updateApplicantChip() {
   const name = els.stuName.value.trim() || "—";
@@ -136,6 +201,8 @@ async function submitApplication() {
     reasonType: document.getElementById("reasonType").value,
     reasonDetails: document.getElementById("reasonDetails").value.trim(),
     guardianContact: document.getElementById("guardianContact").value.trim(),
+    verified: state.verified,
+    idPhoto: state.thumbnailDataUrl || null,
     submittedAt: new Date().toISOString()
   };
 
@@ -167,9 +234,17 @@ async function submitApplication() {
 
 function resetWizard() {
   state.photoDataUrl = null;
+  state.thumbnailDataUrl = null;
+  state.verified = false;
   els.previewImg.hidden = true;
   els.ocrStatus.hidden = true;
-  [els.stuName, els.stuRoll, els.stuClass, els.stuSection].forEach((f) => (f.value = ""));
+  els.verifyBadge.className = "verify-badge";
+  els.verifyBadge.innerHTML = "";
+  els.manualConfirmRow.hidden = true;
+  [els.stuName, els.stuRoll, els.stuClass, els.stuSection].forEach((f) => {
+    f.value = "";
+    f.readOnly = false;
+  });
   document.getElementById("dateFrom").value = "";
   document.getElementById("dateTo").value = "";
   document.getElementById("reasonType").value = "";

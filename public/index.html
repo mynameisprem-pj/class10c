@@ -57,7 +57,8 @@
     <!-- STEP 2: CONFIRM -->
     <section class="panel" id="panel-2">
       <h1>Confirm your details</h1>
-      <p class="hint">Check that these match your ID card. Fix anything the scan got wrong.</p>
+
+      <div class="verify-badge" id="verifyBadge"></div>
 
       <div class="field-grid">
         <label class="field">
@@ -78,9 +79,14 @@
         </label>
       </div>
 
+      <label class="manual-confirm-row" id="manualConfirmRow" hidden>
+        <input type="checkbox" id="manualConfirmCheckbox">
+        <span>I confirm these details are accurate. I understand my class teacher will see this was entered manually, not read automatically from my ID card.</span>
+      </label>
+
       <div class="actions">
         <button type="button" class="btn ghost" id="backTo1">Rescan</button>
-        <button type="button" class="btn primary" id="toStep3">Details are correct</button>
+        <button type="button" class="btn primary" id="toStep3">Confirm</button>
       </div>
     </section>
 

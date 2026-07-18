@@ -99,15 +99,30 @@ function renderApplications(apps) {
   apps.forEach((a) => {
     const card = document.createElement("div");
     card.className = "app-card";
+
+    const statusBadge = a.verified
+      ? `<span class="verify-status ok">✓ Verified from ID</span>`
+      : `<span class="verify-status warn">⚠ Manually entered</span>`;
+
+    const photoHtml = a.idPhoto
+      ? `<img class="app-card-photo" src="${a.idPhoto}" alt="ID card photo for ${escapeHtml(a.name)}">`
+      : `<div class="app-card-photo app-card-photo-missing">No photo</div>`;
+
     card.innerHTML = `
-      <div class="app-card-top">
-        <span class="app-card-name">${escapeHtml(a.name)}</span>
-        <span class="app-card-meta">Roll ${escapeHtml(a.roll)} &middot; ${escapeHtml(a.className)}-${escapeHtml(a.section)}</span>
+      <div class="app-card-body">
+        ${photoHtml}
+        <div class="app-card-info">
+          <div class="app-card-top">
+            <span class="app-card-name">${escapeHtml(a.name)}</span>
+            <span class="app-card-meta">Roll ${escapeHtml(a.roll)} &middot; ${escapeHtml(a.className)}-${escapeHtml(a.section)}</span>
+          </div>
+          ${statusBadge}
+          <div class="app-card-dates">${formatDate(a.dateFrom)} &rarr; ${formatDate(a.dateTo)}</div>
+          <span class="app-card-reason-type">${escapeHtml(a.reasonType)}</span>
+          <p class="app-card-details">${escapeHtml(a.reasonDetails)}</p>
+          <div class="app-card-contact">Guardian contact: ${escapeHtml(a.guardianContact)}</div>
+        </div>
       </div>
-      <div class="app-card-dates">${formatDate(a.dateFrom)} &rarr; ${formatDate(a.dateTo)}</div>
-      <span class="app-card-reason-type">${escapeHtml(a.reasonType)}</span>
-      <p class="app-card-details">${escapeHtml(a.reasonDetails)}</p>
-      <div class="app-card-contact">Guardian contact: ${escapeHtml(a.guardianContact)}</div>
     `;
     el.appList.appendChild(card);
   });

@@ -42,6 +42,10 @@ module.exports = async (req, res) => {
     reasonType: body.reasonType,
     reasonDetails: String(body.reasonDetails).slice(0, 1000),
     guardianContact: String(body.guardianContact).slice(0, 20),
+    verified: body.verified === true,
+    idPhoto: typeof body.idPhoto === "string" && body.idPhoto.startsWith("data:image/")
+      ? body.idPhoto.slice(0, 400000) // guard against oversized payloads
+      : null,
     submittedAt: body.submittedAt || new Date().toISOString()
   };
 
