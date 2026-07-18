@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leave Application — Class X, Section C</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <span class="seal">✦</span>
+      <div>
+        <p class="masthead-title">Leave application</p>
+        <p class="masthead-sub">Class X &middot; Section C</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="wizard">
+
+    <ol class="steps" id="stepTracker">
+      <li class="step active" data-step="1"><span>1</span>Scan ID</li>
+      <li class="step" data-step="2"><span>2</span>Confirm</li>
+      <li class="step" data-step="3"><span>3</span>Apply</li>
+    </ol>
+
+    <!-- STEP 1: SCAN -->
+    <section class="panel active" id="panel-1">
+      <h1>Scan your ID card</h1>
+      <p class="hint">Lay your ID card flat under good light and take a clear, straight-on photo of the front.</p>
+
+      <div class="scan-frame" id="scanFrame">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <video id="camera" autoplay playsinline muted></video>
+        <canvas id="captureCanvas" hidden></canvas>
+        <img id="previewImg" alt="Captured ID card" hidden>
+      </div>
+
+      <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+
+      <div class="actions">
+        <button type="button" class="btn primary" id="captureBtn">Capture photo</button>
+        <button type="button" class="btn ghost" id="uploadBtn">Upload photo instead</button>
+      </div>
+
+      <div class="ocr-status" id="ocrStatus" hidden>
+        <div class="spinner"></div>
+        <span id="ocrStatusText">Reading your ID card&hellip;</span>
+      </div>
+    </section>
+
+    <!-- STEP 2: CONFIRM -->
+    <section class="panel" id="panel-2">
+      <h1>Confirm your details</h1>
+      <p class="hint">Check that these match your ID card. Fix anything the scan got wrong.</p>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Full name</span>
+          <input type="text" id="stuName" required>
+        </label>
+        <label class="field">
+          <span>Roll no.</span>
+          <input type="text" id="stuRoll" required>
+        </label>
+        <label class="field">
+          <span>Class</span>
+          <input type="text" id="stuClass" required>
+        </label>
+        <label class="field">
+          <span>Section</span>
+          <input type="text" id="stuSection" required>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" id="backTo1">Rescan</button>
+        <button type="button" class="btn primary" id="toStep3">Details are correct</button>
+      </div>
+    </section>
+
+    <!-- STEP 3: APPLICATION -->
+    <section class="panel" id="panel-3">
+      <h1>Application for leave</h1>
+      <p class="hint">This will be sent directly to your class teacher.</p>
+
+      <div class="applicant-chip" id="applicantChip"></div>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Leave from</span>
+          <input type="date" id="dateFrom" required>
+        </label>
+        <label class="field">
+          <span>Leave to</span>
+          <input type="date" id="dateTo" required>
+        </label>
+      </div>
+
+      <label class="field full">
+        <span>Reason</span>
+        <select id="reasonType" required>
+          <option value="" disabled selected>Select a reason</option>
+          <option value="Sickness">Sickness</option>
+          <option value="Family function">Family function</option>
+          <option value="Personal work">Personal work</option>
+          <option value="Travel">Travel</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+
+      <label class="field full">
+        <span>Details</span>
+        <textarea id="reasonDetails" rows="4" placeholder="Briefly explain the reason for your leave" required></textarea>
+      </label>
+
+      <label class="field full">
+        <span>Parent / guardian contact</span>
+        <input type="tel" id="guardianContact" placeholder="Contact number for verification" required>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" id="backTo2">Back</button>
+        <button type="button" class="btn primary" id="submitBtn">Send application</button>
+      </div>
+    </section>
+
+    <!-- STEP 4: DONE -->
+    <section class="panel" id="panel-done">
+      <div class="done-mark">✓</div>
+      <h1>Application sent</h1>
+      <p class="hint">Your class teacher will see this application. You can close this page now.</p>
+      <button type="button" class="btn ghost" id="restartBtn">Submit another application</button>
+    </section>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+  <script src="js/ocr.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "class-leave-application",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Leave application system for Class X Section C - student form with ID scan, GitHub-backed storage, teacher dashboard.",
+  "engines": {
+    "node": ">=18"
+  }
+}

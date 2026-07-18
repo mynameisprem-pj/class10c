@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher dashboard — Leave applications</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/teacher.css">
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <span class="seal">✦</span>
+      <div>
+        <p class="masthead-title">Teacher dashboard</p>
+        <p class="masthead-sub">Class X &middot; Section C</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="wizard">
+
+    <!-- LOGIN -->
+    <section class="panel active" id="loginPanel">
+      <h1>Log in</h1>
+      <p class="hint">Enter the password to view leave applications.</p>
+      <label class="field full">
+        <span>Password</span>
+        <input type="password" id="passwordInput" autocomplete="current-password">
+      </label>
+      <p class="error-text" id="loginError" hidden></p>
+      <div class="actions">
+        <button type="button" class="btn primary" id="loginBtn">Log in</button>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="panel" id="dashboardPanel">
+      <div class="dash-header">
+        <h1>Applications</h1>
+        <button type="button" class="btn ghost small" id="logoutBtn">Log out</button>
+      </div>
+
+      <div class="dash-toolbar">
+        <button type="button" class="btn ghost small" id="refreshBtn">Refresh</button>
+        <span class="dash-count" id="dashCount"></span>
+      </div>
+
+      <p class="hint" id="emptyState" hidden>No applications yet.</p>
+
+      <div class="app-list" id="appList"></div>
+    </section>
+
+  </main>
+
+  <script src="js/teacher.js"></script>
+</body>
+</html>

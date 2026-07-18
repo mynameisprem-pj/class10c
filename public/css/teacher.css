@@ -1,0 +1,77 @@
+.dash-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.btn.small {
+  flex: none;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.dash-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+.dash-count {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.app-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--paper);
+}
+.app-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.app-card-name {
+  font-weight: 600;
+  color: var(--navy);
+  font-size: 15px;
+}
+.app-card-meta {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.app-card-dates {
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.app-card-reason-type {
+  display: inline-block;
+  background: var(--gold-light);
+  color: var(--navy);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+.app-card-details {
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+.app-card-contact {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
