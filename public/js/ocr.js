@@ -35,8 +35,8 @@ function parseIdCardText(rawText) {
       ? lines[classLineIndex] + " " + (lines[classLineIndex + 1] || "")
       : lines.join(" ");
 
-  const classMatch = classLine.match(/class\s*[:\-]?\s*([A-Za-z0-9]+)/i);
-  const secMatch = classLine.match(/sec(?:tion)?\s*[:\-]?\s*([A-Za-z0-9]+)/i);
+  const classMatch = classLine.match(/class\s*[:\-]?\s*([IVXivx]{1,5}|\d{1,2})\b/);
+  const secMatch = classLine.match(/sec(?:tion)?\s*[:\-]?\s*([A-Za-z])\b/i);
   const rollMatch = classLine.match(/roll\s*no\.?\s*[:\-]?\s*(\d+)/i);
 
   if (classMatch) result.className = normalizeClass(classMatch[1]);
@@ -75,7 +75,10 @@ function titleCase(str) {
 }
 
 function normalizeClass(val) {
-  const romanMap = { IX: "9", VIII: "8", X: "10", XI: "11", XII: "12" };
+  const romanMap = {
+    I: "1", II: "2", III: "3", IV: "4", V: "5", VI: "6",
+    VII: "7", VIII: "8", IX: "9", X: "10", XI: "11", XII: "12"
+  };
   const upper = val.toUpperCase();
   return romanMap[upper] || val;
 }
