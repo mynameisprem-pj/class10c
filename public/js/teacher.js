@@ -13,7 +13,10 @@ const el = {
   refreshBtn: document.getElementById("refreshBtn"),
   dashCount: document.getElementById("dashCount"),
   emptyState: document.getElementById("emptyState"),
-  appList: document.getElementById("appList")
+  appList: document.getElementById("appList"),
+  lightbox: document.getElementById("photoLightbox"),
+  lightboxImg: document.getElementById("lightboxImg"),
+  lightboxClose: document.getElementById("lightboxClose")
 };
 
 function showDashboard() {
@@ -150,6 +153,30 @@ function togglePasswordVisibility() {
 }
 
 el.eyeToggle.addEventListener("click", togglePasswordVisibility);
+function openLightbox(src) {
+  el.lightboxImg.src = src;
+  el.lightbox.classList.add("open");
+}
+
+function closeLightbox() {
+  el.lightbox.classList.remove("open");
+  el.lightboxImg.src = "";
+}
+
+el.appList.addEventListener("click", (e) => {
+  if (e.target.matches("img.app-card-photo")) {
+    openLightbox(e.target.src);
+  }
+});
+el.lightbox.addEventListener("click", closeLightbox);
+el.lightboxClose.addEventListener("click", (e) => {
+  e.stopPropagation();
+  closeLightbox();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeLightbox();
+});
+
 el.loginBtn.addEventListener("click", login);
 el.passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") login();

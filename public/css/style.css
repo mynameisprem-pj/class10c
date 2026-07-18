@@ -128,6 +128,28 @@ h1 {
   line-height: 1.5;
 }
 
+.form-section {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.form-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.form-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0 0 8px;
+}
+.required-star {
+  color: var(--danger);
+}
+
 .scan-frame {
   position: relative;
   aspect-ratio: 4 / 3;

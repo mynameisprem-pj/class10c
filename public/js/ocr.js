@@ -5,12 +5,97 @@
 //   Class : IX        Sec : C      Roll No. : 43
 //   Guardian: ...
 //   ...
+//
+// ID cards have small, dense text over a busy/colorful design, which Tesseract
+// struggles with directly. Preprocessing the photo into a clean, upscaled,
+// black-and-white image before OCR makes a large difference in accuracy.
 
-async function runOcrOnImage(imageSource) {
-  const { data } = await Tesseract.recognize(imageSource, "eng", {
-    logger: () => {} // silence per-progress logs; UI shows its own status text
+async function runOcrOnImage(imageDataUrl) {
+  const preprocessed = await preprocessImage(imageDataUrl);
+
+  const worker = await Tesseract.createWorker("eng", 1, { logger: () => {} });
+  await worker.setParameters({
+    tessedit_pageseg_mode: "6" // treat the card as a single uniform block of text
   });
+
+  const { data } = await worker.recognize(preprocessed);
+  await worker.terminate();
+
+  // Useful for debugging misreads on a real card — check the browser console.
+  console.log("OCR raw text:\n" + data.text);
+
   return parseIdCardText(data.text);
+}
+
+// Upscales the photo and converts it to high-contrast black-and-white using
+// Otsu's method, which finds the best split point between "text" and
+// "background" automatically rather than a fixed guess.
+function preprocessImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const targetWidth = Math.max(img.width, 1400);
+      const scale = targetWidth / img.width;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const gray = toGrayscale(imageData);
+      const threshold = otsuThreshold(gray);
+      binarize(imageData, gray, threshold);
+      ctx.putImageData(imageData, 0, 0);
+
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.src = dataUrl;
+  });
+}
+
+function toGrayscale(imageData) {
+  const { data, width, height } = imageData;
+  const gray = new Uint8ClampedArray(width * height);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    gray[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  return gray;
+}
+
+function otsuThreshold(gray) {
+  const histogram = new Array(256).fill(0);
+  for (let i = 0; i < gray.length; i++) histogram[gray[i]]++;
+  const total = gray.length;
+
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * histogram[t];
+
+  let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += histogram[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * histogram[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+    if (varBetween > maxVar) {
+      maxVar = varBetween;
+      threshold = t;
+    }
+  }
+  return threshold;
+}
+
+function binarize(imageData, gray, threshold) {
+  const { data } = imageData;
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    const v = gray[p] > threshold ? 255 : 0;
+    data[i] = data[i + 1] = data[i + 2] = v;
+  }
 }
 
 function parseIdCardText(rawText) {

@@ -27,12 +27,12 @@ function createThumbnail(imageSrc, maxWidth = 480) {
 
 const els = {
   panels: {
-    1: document.getElementById("panel-1"),
-    2: document.getElementById("panel-2"),
-    3: document.getElementById("panel-3"),
+    welcome: document.getElementById("panel-welcome"),
+    form: document.getElementById("panel-form"),
     done: document.getElementById("panel-done")
   },
-  steps: document.querySelectorAll(".step"),
+  continueBtn: document.getElementById("continueBtn"),
+  backToWelcomeBtn: document.getElementById("backToWelcome"),
   video: document.getElementById("camera"),
   canvas: document.getElementById("captureCanvas"),
   previewImg: document.getElementById("previewImg"),
@@ -42,27 +42,18 @@ const els = {
   uploadBtn: document.getElementById("uploadBtn"),
   ocrStatus: document.getElementById("ocrStatus"),
   ocrStatusText: document.getElementById("ocrStatusText"),
+  verifyBadge: document.getElementById("verifyBadge"),
+  identityGrid: document.getElementById("identityGrid"),
   stuName: document.getElementById("stuName"),
   stuRoll: document.getElementById("stuRoll"),
   stuClass: document.getElementById("stuClass"),
   stuSection: document.getElementById("stuSection"),
-  applicantChip: document.getElementById("applicantChip"),
-  submitBtn: document.getElementById("submitBtn"),
-  verifyBadge: document.getElementById("verifyBadge"),
-  manualConfirmRow: document.getElementById("manualConfirmRow"),
-  manualConfirmCheckbox: document.getElementById("manualConfirmCheckbox"),
-  toStep3Btn: document.getElementById("toStep3")
+  submitBtn: document.getElementById("submitBtn")
 };
 
-function goToStep(stepKey) {
-  Object.entries(els.panels).forEach(([key, panel]) => {
-    panel.classList.toggle("active", key === String(stepKey));
-  });
-  els.steps.forEach((stepEl) => {
-    const n = Number(stepEl.dataset.step);
-    stepEl.classList.remove("active", "done");
-    if (n === stepKey) stepEl.classList.add("active");
-    else if (n < stepKey) stepEl.classList.add("done");
+function goToPanel(key) {
+  Object.entries(els.panels).forEach(([k, panel]) => {
+    panel.classList.toggle("active", k === key);
   });
 }
 
@@ -75,7 +66,6 @@ async function startCamera() {
     els.video.hidden = false;
     els.previewImg.hidden = true;
   } catch (err) {
-    // No camera access (desktop, permissions denied) — fall back to upload only.
     els.captureBtn.disabled = true;
     els.captureBtn.textContent = "Camera unavailable — use upload";
   }
@@ -125,6 +115,9 @@ async function runOcr(imageDataUrl) {
   els.ocrStatus.hidden = false;
   els.captureBtn.disabled = true;
   els.uploadBtn.disabled = true;
+  els.identityGrid.hidden = true;
+  els.verifyBadge.className = "verify-badge";
+  els.verifyBadge.innerHTML = "";
 
   let extracted = { name: "", roll: "", className: "", section: "" };
   try {
@@ -134,63 +127,48 @@ async function runOcr(imageDataUrl) {
   } finally {
     els.captureBtn.disabled = false;
     els.uploadBtn.disabled = false;
+    els.ocrStatus.hidden = true;
   }
 
   els.stuName.value = extracted.name || "";
   els.stuRoll.value = extracted.roll || "";
   els.stuClass.value = extracted.className || "";
   els.stuSection.value = extracted.section || "";
+  els.identityGrid.hidden = false;
 
   const allFieldsFound = extracted.name && extracted.roll && extracted.className && extracted.section;
   const classMatches = extracted.className === CONFIG.expectedClass;
   const sectionMatches = extracted.section === CONFIG.expectedSection;
   state.verified = Boolean(allFieldsFound && classMatches && sectionMatches);
 
-  applyVerificationUi(extracted, allFieldsFound, classMatches, sectionMatches);
-
-  els.ocrStatusText.textContent = state.verified
-    ? "Card read successfully."
-    : "Couldn't fully verify the card — check the details below.";
-  setTimeout(() => goToStep(2), state.verified ? 400 : 700);
+  applyVerificationUi(allFieldsFound, classMatches, sectionMatches);
 }
 
-function applyVerificationUi(extracted, allFieldsFound, classMatches, sectionMatches) {
-  const fields = [els.stuName, els.stuRoll, els.stuClass, els.stuSection];
-
+function applyVerificationUi(allFieldsFound, classMatches, sectionMatches) {
   if (state.verified) {
-    fields.forEach((f) => (f.readOnly = true));
     els.verifyBadge.className = "verify-badge ok";
-    els.verifyBadge.innerHTML = "✓ Read automatically from your ID card. These fields are locked — rescan if something looks wrong.";
-    els.manualConfirmRow.hidden = true;
-    els.manualConfirmCheckbox.checked = false;
-    els.toStep3Btn.disabled = false;
+    els.verifyBadge.innerHTML = "✓ Read automatically from your ID card.";
   } else {
-    fields.forEach((f) => (f.readOnly = false));
     els.verifyBadge.className = "verify-badge warn";
     if (!allFieldsFound) {
-      els.verifyBadge.innerHTML = "⚠ Couldn't read some details from the card. Fill them in carefully — this application will be marked as manually entered.";
+      els.verifyBadge.innerHTML = "⚠ Couldn't clearly read your ID card. Rescan with better lighting, hold the card flat, and fill the frame.";
     } else if (!classMatches || !sectionMatches) {
-      els.verifyBadge.innerHTML = `⚠ This card doesn't show Class ${CONFIG.expectedClass}, Section ${CONFIG.expectedSection}. Double-check the fields, or rescan — this application will be marked as manually entered.`;
+      els.verifyBadge.innerHTML = `⚠ This card doesn't show Class ${CONFIG.expectedClass}, Section ${CONFIG.expectedSection} — this form is only for that class. Rescan if this is a misread.`;
     }
-    els.manualConfirmRow.hidden = false;
-    els.manualConfirmCheckbox.checked = false;
-    els.toStep3Btn.disabled = true;
   }
+  updateSubmitAvailability();
 }
 
-els.manualConfirmCheckbox?.addEventListener("change", () => {
-  els.toStep3Btn.disabled = !els.manualConfirmCheckbox.checked;
-});
-
-function updateApplicantChip() {
-  const name = els.stuName.value.trim() || "—";
-  const roll = els.stuRoll.value.trim() || "—";
-  const cls = els.stuClass.value.trim() || "—";
-  const sec = els.stuSection.value.trim() || "—";
-  els.applicantChip.textContent = `${name} · Class ${cls}-${sec} · Roll ${roll}`;
+function updateSubmitAvailability() {
+  els.submitBtn.disabled = !state.verified;
 }
 
 async function submitApplication() {
+  if (!state.verified) {
+    alert("Your ID card couldn't be verified. Please scan it before submitting.");
+    return;
+  }
+
   const payload = {
     name: els.stuName.value.trim(),
     roll: els.stuRoll.value.trim(),
@@ -223,11 +201,12 @@ async function submitApplication() {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Request failed");
-    goToStep("done");
+    stopCamera();
+    goToPanel("done");
   } catch (err) {
     alert("Couldn't send the application. Please check your connection and try again.");
   } finally {
-    els.submitBtn.disabled = false;
+    els.submitBtn.disabled = !state.verified;
     els.submitBtn.textContent = "Send application";
   }
 }
@@ -236,37 +215,36 @@ function resetWizard() {
   state.photoDataUrl = null;
   state.thumbnailDataUrl = null;
   state.verified = false;
+
   els.previewImg.hidden = true;
   els.ocrStatus.hidden = true;
+  els.identityGrid.hidden = true;
   els.verifyBadge.className = "verify-badge";
   els.verifyBadge.innerHTML = "";
-  els.manualConfirmRow.hidden = true;
-  [els.stuName, els.stuRoll, els.stuClass, els.stuSection].forEach((f) => {
-    f.value = "";
-    f.readOnly = false;
-  });
+
+  [els.stuName, els.stuRoll, els.stuClass, els.stuSection].forEach((f) => (f.value = ""));
   document.getElementById("dateFrom").value = "";
   document.getElementById("dateTo").value = "";
   document.getElementById("reasonType").value = "";
   document.getElementById("reasonDetails").value = "";
   document.getElementById("guardianContact").value = "";
-  goToStep(1);
-  startCamera();
+
+  els.submitBtn.disabled = true;
+  els.submitBtn.textContent = "Send application";
+
+  goToPanel("welcome");
 }
 
+els.continueBtn.addEventListener("click", () => {
+  goToPanel("form");
+  startCamera();
+});
+els.backToWelcomeBtn.addEventListener("click", () => {
+  stopCamera();
+  goToPanel("welcome");
+});
 els.captureBtn.addEventListener("click", captureFrame);
 els.uploadBtn.addEventListener("click", () => els.fileInput.click());
 els.fileInput.addEventListener("change", handleFileUpload);
-document.getElementById("backTo1").addEventListener("click", () => {
-  goToStep(1);
-  startCamera();
-});
-document.getElementById("toStep3").addEventListener("click", () => {
-  updateApplicantChip();
-  goToStep(3);
-});
-document.getElementById("backTo2").addEventListener("click", () => goToStep(2));
 els.submitBtn.addEventListener("click", submitApplication);
 document.getElementById("restartBtn").addEventListener("click", resetWizard);
-
-startCamera();

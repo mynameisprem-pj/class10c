@@ -20,123 +20,111 @@
 
   <main class="wizard">
 
-    <ol class="steps" id="stepTracker">
-      <li class="step active" data-step="1"><span>1</span>Scan ID</li>
-      <li class="step" data-step="2"><span>2</span>Confirm</li>
-      <li class="step" data-step="3"><span>3</span>Apply</li>
-    </ol>
-
-    <!-- STEP 1: SCAN -->
-    <section class="panel active" id="panel-1">
-      <h1>Scan your ID card</h1>
-      <p class="hint">Lay your ID card flat under good light and take a clear, straight-on photo of the front.</p>
-
-      <div class="scan-frame" id="scanFrame">
-        <div class="corner tl"></div>
-        <div class="corner tr"></div>
-        <div class="corner bl"></div>
-        <div class="corner br"></div>
-        <video id="camera" autoplay playsinline muted></video>
-        <canvas id="captureCanvas" hidden></canvas>
-        <img id="previewImg" alt="Captured ID card" hidden>
-      </div>
-
-      <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
-
+    <!-- WELCOME -->
+    <section class="panel active" id="panel-welcome">
+      <h1>Hello, Class 10 C students</h1>
+      <p class="hint">Here you can send a leave application to your class teacher. It only takes a minute.</p>
       <div class="actions">
-        <button type="button" class="btn primary" id="captureBtn">Capture photo</button>
-        <button type="button" class="btn ghost" id="uploadBtn">Upload photo instead</button>
-      </div>
-
-      <div class="ocr-status" id="ocrStatus" hidden>
-        <div class="spinner"></div>
-        <span id="ocrStatusText">Reading your ID card&hellip;</span>
+        <button type="button" class="btn primary" id="continueBtn">Continue</button>
       </div>
     </section>
 
-    <!-- STEP 2: CONFIRM -->
-    <section class="panel" id="panel-2">
-      <h1>Confirm your details</h1>
+    <!-- APPLICATION FORM -->
+    <section class="panel" id="panel-form">
+      <h1>Leave application</h1>
 
-      <div class="verify-badge" id="verifyBadge"></div>
+      <div class="form-section">
+        <p class="form-section-label">Scan your ID card <span class="required-star">*</span></p>
+        <p class="hint">This form is only for Class 10, Section C. Lay your ID card flat under good light and take a clear, straight-on photo of the front.</p>
 
-      <div class="field-grid">
-        <label class="field">
-          <span>Full name</span>
-          <input type="text" id="stuName" required>
+        <div class="scan-frame" id="scanFrame">
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+          <video id="camera" autoplay playsinline muted></video>
+          <canvas id="captureCanvas" hidden></canvas>
+          <img id="previewImg" alt="Captured ID card" hidden>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="captureBtn">Capture photo</button>
+          <button type="button" class="btn ghost" id="uploadBtn">Upload photo instead</button>
+        </div>
+
+        <div class="ocr-status" id="ocrStatus" hidden>
+          <div class="spinner"></div>
+          <span id="ocrStatusText">Reading your ID card&hellip;</span>
+        </div>
+
+        <div class="verify-badge" id="verifyBadge"></div>
+
+        <div class="field-grid" id="identityGrid" hidden>
+          <label class="field">
+            <span>Full name</span>
+            <input type="text" id="stuName" readonly>
+          </label>
+          <label class="field">
+            <span>Roll no.</span>
+            <input type="text" id="stuRoll" readonly>
+          </label>
+          <label class="field">
+            <span>Class</span>
+            <input type="text" id="stuClass" readonly>
+          </label>
+          <label class="field">
+            <span>Section</span>
+            <input type="text" id="stuSection" readonly>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <p class="form-section-label">Application details</p>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Leave from</span>
+            <input type="date" id="dateFrom" required>
+          </label>
+          <label class="field">
+            <span>Leave to</span>
+            <input type="date" id="dateTo" required>
+          </label>
+        </div>
+
+        <label class="field full">
+          <span>Reason</span>
+          <select id="reasonType" required>
+            <option value="" disabled selected>Select a reason</option>
+            <option value="Sickness">Sickness</option>
+            <option value="Family function">Family function</option>
+            <option value="Personal work">Personal work</option>
+            <option value="Travel">Travel</option>
+            <option value="Other">Other</option>
+          </select>
         </label>
-        <label class="field">
-          <span>Roll no.</span>
-          <input type="text" id="stuRoll" required>
+
+        <label class="field full">
+          <span>Details</span>
+          <textarea id="reasonDetails" rows="4" placeholder="Briefly explain the reason for your leave" required></textarea>
         </label>
-        <label class="field">
-          <span>Class</span>
-          <input type="text" id="stuClass" required>
-        </label>
-        <label class="field">
-          <span>Section</span>
-          <input type="text" id="stuSection" required>
+
+        <label class="field full">
+          <span>Parent / guardian contact</span>
+          <input type="tel" id="guardianContact" placeholder="Contact number for verification" required>
         </label>
       </div>
 
-      <label class="manual-confirm-row" id="manualConfirmRow" hidden>
-        <input type="checkbox" id="manualConfirmCheckbox">
-        <span>I confirm these details are accurate. I understand my class teacher will see this was entered manually, not read automatically from my ID card.</span>
-      </label>
-
       <div class="actions">
-        <button type="button" class="btn ghost" id="backTo1">Rescan</button>
-        <button type="button" class="btn primary" id="toStep3">Confirm</button>
+        <button type="button" class="btn ghost" id="backToWelcome">Back</button>
+        <button type="button" class="btn primary" id="submitBtn" disabled>Send application</button>
       </div>
     </section>
 
-    <!-- STEP 3: APPLICATION -->
-    <section class="panel" id="panel-3">
-      <h1>Application for leave</h1>
-      <p class="hint">This will be sent directly to your class teacher.</p>
-
-      <div class="applicant-chip" id="applicantChip"></div>
-
-      <div class="field-grid">
-        <label class="field">
-          <span>Leave from</span>
-          <input type="date" id="dateFrom" required>
-        </label>
-        <label class="field">
-          <span>Leave to</span>
-          <input type="date" id="dateTo" required>
-        </label>
-      </div>
-
-      <label class="field full">
-        <span>Reason</span>
-        <select id="reasonType" required>
-          <option value="" disabled selected>Select a reason</option>
-          <option value="Sickness">Sickness</option>
-          <option value="Family function">Family function</option>
-          <option value="Personal work">Personal work</option>
-          <option value="Travel">Travel</option>
-          <option value="Other">Other</option>
-        </select>
-      </label>
-
-      <label class="field full">
-        <span>Details</span>
-        <textarea id="reasonDetails" rows="4" placeholder="Briefly explain the reason for your leave" required></textarea>
-      </label>
-
-      <label class="field full">
-        <span>Parent / guardian contact</span>
-        <input type="tel" id="guardianContact" placeholder="Contact number for verification" required>
-      </label>
-
-      <div class="actions">
-        <button type="button" class="btn ghost" id="backTo2">Back</button>
-        <button type="button" class="btn primary" id="submitBtn">Send application</button>
-      </div>
-    </section>
-
-    <!-- STEP 4: DONE -->
+    <!-- DONE -->
     <section class="panel" id="panel-done">
       <div class="done-mark">✓</div>
       <h1>Application sent</h1>
