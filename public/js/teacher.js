@@ -16,7 +16,10 @@ const el = {
   appList: document.getElementById("appList"),
   lightbox: document.getElementById("photoLightbox"),
   lightboxImg: document.getElementById("lightboxImg"),
-  lightboxClose: document.getElementById("lightboxClose")
+  lightboxClose: document.getElementById("lightboxClose"),
+  detailModal: document.getElementById("detailModal"),
+  detailContent: document.getElementById("detailContent"),
+  detailClose: document.getElementById("detailClose")
 };
 
 function showDashboard() {
@@ -104,8 +107,8 @@ function renderApplications(apps) {
     card.className = "app-card";
 
     const statusBadge = a.verified
-      ? `<span class="verify-status ok">✓ Verified from ID</span>`
-      : `<span class="verify-status warn">⚠ Manually entered</span>`;
+      ? `<span class="verify-status ok">✓ Verified</span>`
+      : `<span class="verify-status warn">⚠ Manual</span>`;
 
     const photoHtml = a.idPhoto
       ? `<img class="app-card-photo" src="${a.idPhoto}" alt="ID card photo for ${escapeHtml(a.name)}">`
@@ -117,24 +120,79 @@ function renderApplications(apps) {
 
     const durationLabel = leaveDurationLabel(a.dateFrom, a.dateTo);
 
+    // Compact summary row only — full details live in the tap-through sheet.
     card.innerHTML = `
-      <div class="app-card-body">
-        ${photoHtml}
-        <div class="app-card-info">
-          <div class="app-card-top">
-            <span class="app-card-name">${escapeHtml(a.name)}</span>
-            <span class="app-card-meta">Roll ${escapeHtml(a.roll)} &middot; ${escapeHtml(a.className)}-${escapeHtml(a.section)}</span>
-          </div>
+      ${photoHtml}
+      <div class="app-card-info">
+        <div class="app-card-top">
+          <span class="app-card-name">${escapeHtml(a.name)}</span>
           ${statusBadge}
-          <div class="app-card-dates">${datesLabel}${durationLabel ? ` <span class="app-card-duration">${durationLabel}</span>` : ""}</div>
-          <span class="app-card-reason-type">${escapeHtml(a.reasonType)}</span>
-          <p class="app-card-details">${escapeHtml(a.reasonDetails)}</p>
-          <div class="app-card-contact">Guardian contact: ${escapeHtml(a.guardianContact)}</div>
         </div>
+        <div class="app-card-meta">Roll ${escapeHtml(a.roll)} &middot; ${escapeHtml(a.className)}-${escapeHtml(a.section)}</div>
+        <div class="app-card-dates">${datesLabel}${durationLabel ? ` <span class="app-card-duration">${durationLabel}</span>` : ""}</div>
       </div>
+      <span class="app-card-chevron">&rsaquo;</span>
     `;
+
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".app-card-photo")) return; // photo has its own lightbox handler
+      openDetail(a);
+    });
+
     el.appList.appendChild(card);
   });
+}
+
+function openDetail(a) {
+  const statusBadge = a.verified
+    ? `<span class="verify-status ok">✓ Verified from ID</span>`
+    : `<span class="verify-status warn">⚠ Manually entered</span>`;
+
+  const photoHtml = a.idPhoto
+    ? `<img class="detail-photo" src="${a.idPhoto}" alt="ID card photo for ${escapeHtml(a.name)}">`
+    : `<div class="detail-photo detail-photo-missing">No photo attached</div>`;
+
+  const datesLabel = a.dateFromBS && a.dateToBS
+    ? `${escapeHtml(a.dateFromBS)} &rarr; ${escapeHtml(a.dateToBS)}`
+    : `${formatDate(a.dateFrom)} &rarr; ${formatDate(a.dateTo)}`;
+
+  const durationLabel = leaveDurationLabel(a.dateFrom, a.dateTo);
+
+  el.detailContent.innerHTML = `
+    ${photoHtml}
+    <div class="detail-name-row">
+      <h2 class="detail-name">${escapeHtml(a.name)}</h2>
+      ${statusBadge}
+    </div>
+    <div class="detail-meta">Roll ${escapeHtml(a.roll)} &middot; Class ${escapeHtml(a.className)}-${escapeHtml(a.section)}</div>
+
+    <div class="detail-row">
+      <span class="detail-label">Leave dates</span>
+      <span class="detail-value">${datesLabel}${durationLabel ? ` (${durationLabel})` : ""}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Reason</span>
+      <span class="detail-value">${escapeHtml(a.reasonType)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Details</span>
+      <span class="detail-value">${escapeHtml(a.reasonDetails)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Guardian contact</span>
+      <span class="detail-value">${escapeHtml(a.guardianContact)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Submitted</span>
+      <span class="detail-value">${a.submittedAt ? new Date(a.submittedAt).toLocaleString() : "—"}</span>
+    </div>
+  `;
+
+  el.detailModal.classList.add("open");
+}
+
+function closeDetail() {
+  el.detailModal.classList.remove("open");
 }
 
 function leaveDurationLabel(dateFromIso, dateToIso) {
@@ -188,8 +246,15 @@ el.lightboxClose.addEventListener("click", (e) => {
   e.stopPropagation();
   closeLightbox();
 });
+el.detailClose.addEventListener("click", closeDetail);
+el.detailModal.addEventListener("click", (e) => {
+  if (e.target === el.detailModal) closeDetail();
+});
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeLightbox();
+  if (e.key === "Escape") {
+    closeLightbox();
+    closeDetail();
+  }
 });
 
 el.loginBtn.addEventListener("click", login);
