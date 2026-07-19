@@ -5,7 +5,7 @@ const crypto = require("crypto");
 // environment variables and never reaches the browser.
 function createToken() {
   const { TOKEN_SECRET } = process.env;
-  const expiresAt = Date.now() + 1000 * 60 * 60 * 8; // 8 hour session
+  const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 90; // 90 day session
   const payload = `${expiresAt}`;
   const signature = crypto.createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex");
   return Buffer.from(`${payload}.${signature}`).toString("base64");

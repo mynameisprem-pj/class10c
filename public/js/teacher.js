@@ -54,7 +54,7 @@ async function login() {
       return;
     }
 
-    sessionStorage.setItem(SESSION_KEY, data.token);
+    localStorage.setItem(SESSION_KEY, data.token);
     el.passwordInput.value = "";
     showDashboard();
   } catch {
@@ -66,12 +66,12 @@ async function login() {
 }
 
 function logout() {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
   showLogin();
 }
 
 async function loadApplications() {
-  const token = sessionStorage.getItem(SESSION_KEY);
+  const token = localStorage.getItem(SESSION_KEY);
   if (!token) {
     showLogin();
     return;
@@ -264,7 +264,7 @@ el.passwordInput.addEventListener("keydown", (e) => {
 el.logoutBtn.addEventListener("click", logout);
 el.refreshBtn.addEventListener("click", loadApplications);
 
-if (sessionStorage.getItem(SESSION_KEY)) {
+if (localStorage.getItem(SESSION_KEY)) {
   showDashboard();
 } else {
   showLogin();
