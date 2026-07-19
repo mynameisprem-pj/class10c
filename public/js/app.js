@@ -6,7 +6,6 @@ const CONFIG = {
 const state = {
   photoDataUrl: null,
   thumbnailDataUrl: null,
-  stream: null,
   verified: false,
   datesValid: false
 };
@@ -34,12 +33,10 @@ const els = {
   },
   continueBtn: document.getElementById("continueBtn"),
   backToWelcomeBtn: document.getElementById("backToWelcome"),
-  video: document.getElementById("camera"),
-  canvas: document.getElementById("captureCanvas"),
   previewImg: document.getElementById("previewImg"),
   scanFrame: document.getElementById("scanFrame"),
+  scanPlaceholder: document.getElementById("scanPlaceholder"),
   fileInput: document.getElementById("fileInput"),
-  captureBtn: document.getElementById("captureBtn"),
   uploadBtn: document.getElementById("uploadBtn"),
   ocrStatus: document.getElementById("ocrStatus"),
   ocrStatusText: document.getElementById("ocrStatusText"),
@@ -61,44 +58,6 @@ function goToPanel(key) {
   });
 }
 
-async function startCamera() {
-  try {
-    state.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
-    });
-    els.video.srcObject = state.stream;
-    els.video.hidden = false;
-    els.previewImg.hidden = true;
-  } catch (err) {
-    els.captureBtn.disabled = true;
-    els.captureBtn.textContent = "Camera unavailable — use upload";
-  }
-}
-
-function stopCamera() {
-  if (state.stream) {
-    state.stream.getTracks().forEach((t) => t.stop());
-    state.stream = null;
-  }
-}
-
-function captureFrame() {
-  const video = els.video;
-  const canvas = els.canvas;
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-  state.photoDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-
-  els.previewImg.src = state.photoDataUrl;
-  els.previewImg.hidden = false;
-  els.video.hidden = true;
-  stopCamera();
-
-  createThumbnail(state.photoDataUrl).then((thumb) => (state.thumbnailDataUrl = thumb));
-  runOcr(state.photoDataUrl);
-}
-
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -107,8 +66,7 @@ function handleFileUpload(e) {
     state.photoDataUrl = reader.result;
     els.previewImg.src = state.photoDataUrl;
     els.previewImg.hidden = false;
-    els.video.hidden = true;
-    stopCamera();
+    els.scanPlaceholder.hidden = true;
     createThumbnail(state.photoDataUrl).then((thumb) => (state.thumbnailDataUrl = thumb));
     runOcr(state.photoDataUrl);
   };
@@ -117,7 +75,6 @@ function handleFileUpload(e) {
 
 async function runOcr(imageDataUrl) {
   els.ocrStatus.hidden = false;
-  els.captureBtn.disabled = true;
   els.uploadBtn.disabled = true;
   els.identityGrid.hidden = true;
   els.verifyBadge.className = "verify-badge";
@@ -129,7 +86,6 @@ async function runOcr(imageDataUrl) {
   } catch (err) {
     // fall through with empty fields — handled as unverified below
   } finally {
-    els.captureBtn.disabled = false;
     els.uploadBtn.disabled = false;
     els.ocrStatus.hidden = true;
   }
@@ -155,9 +111,9 @@ function applyVerificationUi(allFieldsFound, classMatches, sectionMatches) {
   } else {
     els.verifyBadge.className = "verify-badge warn";
     if (!allFieldsFound) {
-      els.verifyBadge.innerHTML = "⚠ Couldn't clearly read your ID card. Rescan with better lighting, hold the card flat, and fill the frame.";
+      els.verifyBadge.innerHTML = "⚠ Couldn't clearly read your ID card. Try uploading a clearer, well-lit photo.";
     } else if (!classMatches || !sectionMatches) {
-      els.verifyBadge.innerHTML = `⚠ This card doesn't show Class ${CONFIG.expectedClass}, Section ${CONFIG.expectedSection} — this form is only for that class. Rescan if this is a misread.`;
+      els.verifyBadge.innerHTML = `⚠ This card doesn't show Class ${CONFIG.expectedClass}, Section ${CONFIG.expectedSection} — this form is only for that class. Upload again if this is a misread.`;
     }
   }
   updateSubmitAvailability();
@@ -174,18 +130,6 @@ function validateDates() {
 
   const from = getSelectedBsDate("dateFrom");
   const to = getSelectedBsDate("dateTo");
-
-  // SAFTEY GUARD: If the dates haven't been picked yet, hide everything and stop here!
-  if (!from || !to || !from.year || !to.year) {
-    els.dateFromError.hidden = true;
-    els.dateToError.hidden = true;
-    els.leaveDuration.hidden = true;
-    state.datesValid = false;
-    updateSubmitAvailability();
-    return; // Exits the function cleanly before it can crash
-  }
-
-  // These are now safe to run because we proved 'from' and 'to' exist above
   const fromAd = new Date(bsDateToAdIso(from.year, from.month, from.day));
   const toAd = new Date(bsDateToAdIso(to.year, to.month, to.day));
 
@@ -274,7 +218,6 @@ async function submitApplication() {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Request failed");
-    stopCamera();
     goToPanel("done");
   } catch (err) {
     alert("Couldn't send the application. Please check your connection and try again.");
@@ -290,6 +233,7 @@ function resetWizard() {
   state.verified = false;
 
   els.previewImg.hidden = true;
+  els.scanPlaceholder.hidden = false;
   els.ocrStatus.hidden = true;
   els.identityGrid.hidden = true;
   els.verifyBadge.className = "verify-badge";
@@ -317,13 +261,10 @@ function resetWizard() {
 
 els.continueBtn.addEventListener("click", () => {
   goToPanel("form");
-  startCamera();
 });
 els.backToWelcomeBtn.addEventListener("click", () => {
-  stopCamera();
   goToPanel("welcome");
 });
-els.captureBtn.addEventListener("click", captureFrame);
 els.uploadBtn.addEventListener("click", () => els.fileInput.click());
 els.fileInput.addEventListener("change", handleFileUpload);
 els.submitBtn.addEventListener("click", submitApplication);
