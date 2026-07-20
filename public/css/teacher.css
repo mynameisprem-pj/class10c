@@ -30,6 +30,24 @@
   outline-offset: 1px;
 }
 
+.search-row {
+  margin-bottom: 12px;
+}
+.search-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--paper);
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
 .dash-header {
   display: flex;
   align-items: baseline;
@@ -57,6 +75,36 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.date-divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 2px 4px;
+}
+.date-divider:first-child {
+  padding-top: 0;
+}
+.date-divider-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-soft);
+}
+.date-divider-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
 }
 
 /* Compact, tappable summary row — full details live in the detail sheet */

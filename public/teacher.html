@@ -56,12 +56,17 @@
         <button type="button" class="btn ghost small" id="logoutBtn">Log out</button>
       </div>
 
+      <div class="search-row">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search by name, roll no., or reason">
+      </div>
+
       <div class="dash-toolbar">
         <button type="button" class="btn ghost small" id="refreshBtn">Refresh</button>
         <span class="dash-count" id="dashCount"></span>
       </div>
 
       <p class="hint" id="emptyState" hidden>No applications yet.</p>
+      <p class="hint" id="noResultsState" hidden>No applications match your search.</p>
 
       <div class="app-list" id="appList"></div>
     </section>
