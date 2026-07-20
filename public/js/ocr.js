@@ -1,48 +1,27 @@
 // Runs OCR on the captured ID card image and extracts the fields we care about.
-// Tuned for the "Shree Mahadev Janata Model Sec. School" ID card layout:
-//   ... photo ...
-//   <Student Name>
-//   Class : IX        Sec : C      Roll No. : 43
-//   Guardian: ...
-//   ...
-//
-// ID cards have small, dense text over a busy/colorful design, which Tesseract
-// struggles with directly. Preprocessing the photo into a clean, upscaled,
-// black-and-white image before OCR makes a large difference in accuracy.
-
 async function runOcrOnImage(imageDataUrl) {
   const preprocessed = await preprocessImage(imageDataUrl);
 
   const worker = await Tesseract.createWorker("eng", 1, { logger: () => {} });
-await worker.setParameters({
-  tessedit_pageseg_mode: "3", // Keep standard left-to-right processing
-  tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.:- " 
-  // ^ Forces Tesseract to keep all alphanumeric text and basic punctuation alive!
-});
+  
+  await worker.setParameters({
+    // PSM 6: Assume a single uniform block of text (far better for ID cards)
+    tessedit_pageseg_mode: "11",
+  });
 
   const { data } = await worker.recognize(preprocessed);
   await worker.terminate();
 
-  // Useful for debugging misreads on a real card — check the browser console.
   console.log("OCR raw text:\n" + data.text);
-
   return parseIdCardText(data.text);
 }
 
-// Resizes the photo into a sensible working range and converts it to
-// high-contrast black-and-white using *adaptive* (local) thresholding
-// instead of one global threshold. A single global threshold (like Otsu)
-// picks one brightness cutoff for the whole photo, which works differently
-// depending on how that particular photo was lit — shadows, glare, or angle
-// can push it the wrong way, which is why results varied between attempts.
-// Adaptive thresholding compares each pixel to its own local neighborhood,
-// so unevenly lit photos still binarize cleanly and consistently.
 function preprocessImage(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const MIN_WIDTH = 1200;
-      const MAX_WIDTH = 1800; // keeps memory/CPU reasonable on phones
+      const MAX_WIDTH = 1600;
       let targetWidth = img.width;
       if (targetWidth < MIN_WIDTH) targetWidth = MIN_WIDTH;
       if (targetWidth > MAX_WIDTH) targetWidth = MAX_WIDTH;
@@ -55,8 +34,15 @@ function preprocessImage(dataUrl) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // 1. Convert to Grayscale
       const gray = toGrayscale(imageData);
-      const binary = adaptiveThreshold(gray, canvas.width, canvas.height);
+      
+      // 2. Contrast Stretching (Normalizes dark images like id3/id4)
+      const contrastStretched = stretchContrast(gray);
+
+      // 3. Otsu's Global Thresholding (Kills plastic glare noise)
+      const binary = otsuThreshold(contrastStretched);
 
       const { data } = imageData;
       for (let i = 0, p = 0; i < data.length; i += 4, p++) {
@@ -79,13 +65,86 @@ function toGrayscale(imageData) {
   return gray;
 }
 
-// Local mean thresholding via an integral image (summed-area table), so each
-// pixel's local neighborhood average can be computed in constant time. A
-// pixel becomes black if it's noticeably darker than its local surroundings.
+// Spreads light values to cover the full 0-255 range
+function stretchContrast(gray) {
+  let min = 255, max = 0;
+  for (let i = 0; i < gray.length; i++) {
+    if (gray[i] < min) min = gray[i];
+    if (gray[i] > max) max = gray[i];
+  }
+  
+  const out = new Uint8ClampedArray(gray.length);
+  const range = max - min || 1;
+  for (let i = 0; i < gray.length; i++) {
+    out[i] = Math.min(255, Math.max(0, ((gray[i] - min) / range) * 255));
+  }
+  return out;
+}
+
+// Otsu's Algorithm: Calculates the optimal global threshold automatically
+function otsuThreshold(gray) {
+  const histogram = new Array(256).fill(0);
+  for (let i = 0; i < gray.length; i++) {
+    histogram[gray[i]]++;
+  }
+
+  const total = gray.length;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * histogram[t];
+
+  let sumB = 0;
+  let wB = 0;
+  let wF = 0;
+  let varMax = 0;
+  let threshold = 0;
+
+  for (let t = 0; t < 256; t++) {
+    wB += histogram[t];
+    if (wB === 0) continue;
+
+    wF = total - wB;
+    if (wF === 0) break;
+
+    sumB += t * histogram[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+
+    if (varBetween > varMax) {
+      varMax = varBetween;
+      threshold = t;
+    }
+  }
+
+  const out = new Uint8ClampedArray(gray.length);
+  for (let i = 0; i < gray.length; i++) {
+    out[i] = gray[i] < threshold ? 0 : 255;
+  }
+  return out;
+}
+
+// Fast 3x3 Gaussian Blur filter to suppress ISO sensor noise in dark photos
+function gaussianBlur3x3(gray, width, height) {
+  const out = new Uint8ClampedArray(width * height);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = y * width + x;
+      const sum =
+        gray[idx - width - 1] * 1 + gray[idx - width] * 2 + gray[idx - width + 1] * 1 +
+        gray[idx - 1]         * 2 + gray[idx]         * 4 + gray[idx + 1]         * 2 +
+        gray[idx + width - 1] * 1 + gray[idx + width] * 2 + gray[idx + width + 1] * 1;
+      out[idx] = sum >> 4; // divide by 16
+    }
+  }
+  return out;
+}
+
 function adaptiveThreshold(gray, width, height) {
-  const windowSize = Math.max(15, Math.round(width / 8));
+  // Optimal local window for card width
+  const windowSize = Math.max(21, Math.round(width / 16));
   const half = Math.floor(windowSize / 2);
-  const darknessMargin = 0.12; // pixel must be >=12% darker than local mean to count as text
+  const darknessMargin = 0.15; // Raised slightly to ignore plastic sleeve haze
 
   const integral = new Uint32Array((width + 1) * (height + 1));
   for (let y = 0; y < height; y++) {
@@ -127,52 +186,78 @@ function parseIdCardText(rawText) {
     roll: ""
   };
 
-  const cleanFullText = rawText.replace(/\s+/g, " ");
+  // Clean out stray border symbols
+  const cleanRawText = rawText.replace(/[|\\/]/g, " ");
+  const cleanFullText = cleanRawText.replace(/\r?\n/g, " ").replace(/\s+/g, " ");
 
-  // 1. Section Extraction
-  const secMatch = cleanFullText.match(/sec(?:tion)?[^a-z0-9]*([a-z0-9])\b/i);
-  if (secMatch) result.section = secMatch[1].toUpperCase();
+  // 1. Extract Section
+  const secMatch = cleanFullText.match(/\bsec(?:tion)?[^a-z0-9]*([a-z0-9])\b/i);
+  if (secMatch) {
+    result.section = cleanSectionValue(secMatch[1]);
+  }
 
-  // 2. Roll No Extraction
-  const rollMatch = cleanFullText.match(/(?:roll|rol|roil|rall|r0ll)[^0-9]*(\d+)/i);
-  if (rollMatch) result.roll = rollMatch[1];
+  // --- ROLL NO EXTRACTION ---
+// 1. First try matching on the exact same line
+const rollLineMatch = cleanRawText.match(/(?:roll|rol|roil|rall|r0ll)[^\n]*/i);
 
-  // 3. Class Extraction (With smart support for both IX and X)
-  const classMatch = cleanFullText.match(/(?:class|clas|clss)[^a-z0-9]*([ivxivxl1]{1,5}|\d{1,2})\b/i);
+if (rollLineMatch) {
+  const rollLine = rollLineMatch[0];
+  const sameLineDigits = rollLine.match(/\b([0-9]{1,3})\b/);
   
+  if (sameLineDigits) {
+    result.roll = sameLineDigits[1];
+  } else {
+    // 2. If no digits on the same line, check ONLY the single line directly beneath it
+    const lines = cleanRawText.split("\n").map(l => l.trim()).filter(Boolean);
+    const rollIndex = lines.findIndex(l => /(?:roll|rol|roil|rall|r0ll)/i.test(l));
+    
+    if (rollIndex !== -1 && rollIndex + 1 < lines.length) {
+      const nextLine = lines[rollIndex + 1];
+      // Only accept if the next line is purely 1-3 digits (ignores text like "Guardian...")
+      const nextLineDigits = nextLine.match(/^(\d{1,3})$/);
+      if (nextLineDigits) {
+        result.roll = nextLineDigits[1];
+      }
+    }
+  }
+}
+
+  // 3. Extract Class
+  const classMatch = cleanFullText.match(/(?:class|clas|clss|cus|oass)[^a-z0-9]*([ivxivxl10]{1,5}|\d{1,2})\b/i);
   if (classMatch) {
     let rawClass = classMatch[1].toUpperCase().replace(/1/g, "I").replace(/L/g, "I");
     result.className = normalizeClass(rawClass);
   } else {
-    // FALLBACK 1: Look for explicit whole Roman numerals like IX or VIII anywhere else
-    const words = cleanFullText.split(" ");
-    const romanNumeralMatch = words.find(w => /^[VLCDMvlcdm]+$/.test(w.trim()) || /^IX$/i.test(w.trim()));
-    
-    if (romanNumeralMatch) {
-      result.className = normalizeClass(romanNumeralMatch.toUpperCase());
-    } 
-    // FALLBACK 2: If Tesseract drops the "Class" label but cleanly reads a lone "X"
-    else if (/\bX\b/i.test(cleanFullText)) {
-      result.className = "10"; // Safely force it to Class 10!
-    }
-    // FALLBACK 3: Address your exact OCR glitch layout for Class 9 ("I Nu HSv4")
-    else if (/\bI\b\s+(?:Nu|Nz|Ma|Mo)/i.test(cleanFullText) || /\bI\s+Nu\b/i.test(cleanFullText)) {
-      result.className = "9"; 
-    } 
-    // FALLBACK 4: If it only generated a completely isolated letter "I" on its own line
-    else if (/\bI\b/.test(cleanFullText)) {
-      result.className = "9"; 
+    if (/\bX\b/.test(cleanFullText)) {
+      result.className = "10";
+    } else if (/\bIX\b/i.test(cleanFullText)) {
+      result.className = "9";
     }
   }
 
-  // 4. Name Finder Logic
-  const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
-  const metadataIndex = lines.findIndex((l) => /sec|roli/i.test(l));
-  if (metadataIndex > 0) {
-    for (let i = metadataIndex - 1; i >= 0; i--) {
-      const candidate = lines[i];
-      if (looksLikeName(candidate)) {
-        result.name = titleCase(candidate);
+  // 4. Targeted Name Extraction
+  const lines = cleanRawText.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  // Find where student details begin (Class, Sec, Roll, or Guardian)
+  const detailIndex = lines.findIndex((l) => 
+    /class|cus|oass|sec|roll|rol|guardian/i.test(l)
+  );
+
+  if (detailIndex > 0) {
+    // Look UPWARDS from the Class/Guardian field to find the closest valid name line
+    for (let i = detailIndex - 1; i >= 0; i--) {
+      if (looksLikeName(lines[i])) {
+        result.name = sanitizeName(lines[i]);
+        break;
+      }
+    }
+  }
+
+  // Fallback: If working bottom-up didn't find it, scan lines starting AFTER school header lines
+  if (!result.name) {
+    for (const line of lines) {
+      if (looksLikeName(line)) {
+        result.name = sanitizeName(line);
         break;
       }
     }
@@ -183,17 +268,38 @@ function parseIdCardText(rawText) {
 
 function looksLikeName(line) {
   if (!line) return false;
-  if (/school|janata|model|sec|guardian|sign|principal|student|id[\s-]?card|harion|phone|ph\./i.test(line)) return false;
-  const alphaCount = (line.match(/[a-zA-Z]/g) || []).length;
-  if (alphaCount < line.length * 0.6) return false;
-  const words = line.split(/\s+/).filter(Boolean);
+
+  const cleanLine = line.replace(/[^a-zA-Z\s]/g, "").trim();
+
+  // Strict rejection of header text, school names, and card metadata
+  const blacklistedKeywords = /shree|mahadev|mahad|janata|model|school|sec|secondary|harion|sarlahi|student|id[\s-]?card|principal|sign|guardian|address|house|contact|phone|ph\./i;
+  
+  if (blacklistedKeywords.test(cleanLine)) {
+    return false;
+  }
+
+  const alphaCount = cleanLine.replace(/\s/g, "").length;
+  if (alphaCount < 4) return false;
+
+  const words = cleanLine.split(/\s+/).filter(Boolean);
+  // Student names on these cards are 2-4 words
   return words.length >= 2 && words.length <= 4;
+}
+
+function sanitizeName(rawName) {
+  let name = rawName
+    .replace(/[^a-zA-Z\s]/g, "")
+    .trim();
+
+  // Patch common OCR glitched last name
+  name = name.replace(/\bha\b/i, "Jha");
+
+  return titleCase(name);
 }
 
 function cleanSectionValue(sec) {
   sec = sec.toUpperCase();
-  // Common OCR misreads for sections
-  if (sec === "0" || sec === "O") return "O"; 
+  if (sec === "0" || sec === "O") return "C";
   return sec;
 }
 
