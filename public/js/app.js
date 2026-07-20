@@ -130,33 +130,53 @@ function validateDates() {
 
   const from = getSelectedBsDate("dateFrom");
   const to = getSelectedBsDate("dateTo");
-  const fromAd = new Date(bsDateToAdIso(from.year, from.month, from.day));
-  const toAd = new Date(bsDateToAdIso(to.year, to.month, to.day));
 
   els.dateFromError.hidden = true;
   els.dateToError.hidden = true;
   let valid = true;
 
-  if (fromAd < today) {
-    els.dateFromError.textContent = "This date has already passed. Please choose today or a future date.";
+  // 1. Guard against empty / unselected "From" date
+  if (!from || !from.year || !from.month || !from.day) {
+    els.dateFromError.textContent = "Please select a start date.";
     els.dateFromError.hidden = false;
     valid = false;
   }
 
-  if (toAd < today) {
-    els.dateToError.textContent = "This date has already passed. Please choose today or a future date.";
-    els.dateToError.hidden = false;
-    valid = false;
-  } else if (toAd < fromAd) {
-    els.dateToError.textContent = "\"Leave to\" can't be before \"Leave from\".";
+  // 2. Guard against empty / unselected "To" date
+  if (!to || !to.year || !to.month || !to.day) {
+    els.dateToError.textContent = "Please select an end date.";
     els.dateToError.hidden = false;
     valid = false;
   }
 
+  // 3. Only run date comparisons if both inputs exist
   if (valid) {
-    const dayCount = Math.round((toAd - fromAd) / 86400000) + 1;
-    els.leaveDuration.textContent = `Leave for ${dayCount} day${dayCount === 1 ? "" : "s"}`;
-    els.leaveDuration.hidden = false;
+    const fromAd = new Date(bsDateToAdIso(from.year, from.month, from.day));
+    const toAd = new Date(bsDateToAdIso(to.year, to.month, to.day));
+
+    if (fromAd < today) {
+      els.dateFromError.textContent = "This date has already passed. Please choose today or a future date.";
+      els.dateFromError.hidden = false;
+      valid = false;
+    }
+
+    if (toAd < today) {
+      els.dateToError.textContent = "This date has already passed. Please choose today or a future date.";
+      els.dateToError.hidden = false;
+      valid = false;
+    } else if (toAd < fromAd) {
+      els.dateToError.textContent = "\"Leave to\" can't be before \"Leave from\".";
+      els.dateToError.hidden = false;
+      valid = false;
+    }
+
+    if (valid) {
+      const dayCount = Math.round((toAd - fromAd) / 86400000) + 1;
+      els.leaveDuration.textContent = `Leave for ${dayCount} day${dayCount === 1 ? "" : "s"}`;
+      els.leaveDuration.hidden = false;
+    } else {
+      els.leaveDuration.hidden = true;
+    }
   } else {
     els.leaveDuration.hidden = true;
   }

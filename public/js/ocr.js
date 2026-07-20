@@ -29,14 +29,23 @@ await worker.setParameters({
   return parseIdCardText(data.text);
 }
 
-// Upscales the photo and converts it to high-contrast black-and-white using
-// Otsu's method, which finds the best split point between "text" and
-// "background" automatically rather than a fixed guess.
+// Resizes the photo into a sensible working range and converts it to
+// high-contrast black-and-white using *adaptive* (local) thresholding
+// instead of one global threshold. A single global threshold (like Otsu)
+// picks one brightness cutoff for the whole photo, which works differently
+// depending on how that particular photo was lit — shadows, glare, or angle
+// can push it the wrong way, which is why results varied between attempts.
+// Adaptive thresholding compares each pixel to its own local neighborhood,
+// so unevenly lit photos still binarize cleanly and consistently.
 function preprocessImage(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const targetWidth = Math.max(img.width, 1400);
+      const MIN_WIDTH = 1200;
+      const MAX_WIDTH = 1800; // keeps memory/CPU reasonable on phones
+      let targetWidth = img.width;
+      if (targetWidth < MIN_WIDTH) targetWidth = MIN_WIDTH;
+      if (targetWidth > MAX_WIDTH) targetWidth = MAX_WIDTH;
       const scale = targetWidth / img.width;
 
       const canvas = document.createElement("canvas");
@@ -47,8 +56,12 @@ function preprocessImage(dataUrl) {
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const gray = toGrayscale(imageData);
-      const threshold = otsuThreshold(gray);
-      binarize(imageData, gray, threshold);
+      const binary = adaptiveThreshold(gray, canvas.width, canvas.height);
+
+      const { data } = imageData;
+      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        data[i] = data[i + 1] = data[i + 2] = binary[p];
+      }
       ctx.putImageData(imageData, 0, 0);
 
       resolve(canvas.toDataURL("image/png"));
@@ -66,38 +79,44 @@ function toGrayscale(imageData) {
   return gray;
 }
 
-function otsuThreshold(gray) {
-  const histogram = new Array(256).fill(0);
-  for (let i = 0; i < gray.length; i++) histogram[gray[i]]++;
-  const total = gray.length;
+// Local mean thresholding via an integral image (summed-area table), so each
+// pixel's local neighborhood average can be computed in constant time. A
+// pixel becomes black if it's noticeably darker than its local surroundings.
+function adaptiveThreshold(gray, width, height) {
+  const windowSize = Math.max(15, Math.round(width / 8));
+  const half = Math.floor(windowSize / 2);
+  const darknessMargin = 0.12; // pixel must be >=12% darker than local mean to count as text
 
-  let sum = 0;
-  for (let t = 0; t < 256; t++) sum += t * histogram[t];
-
-  let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
-  for (let t = 0; t < 256; t++) {
-    wB += histogram[t];
-    if (wB === 0) continue;
-    const wF = total - wB;
-    if (wF === 0) break;
-    sumB += t * histogram[t];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const varBetween = wB * wF * (mB - mF) * (mB - mF);
-    if (varBetween > maxVar) {
-      maxVar = varBetween;
-      threshold = t;
+  const integral = new Uint32Array((width + 1) * (height + 1));
+  for (let y = 0; y < height; y++) {
+    let rowSum = 0;
+    const rowOffset = (y + 1) * (width + 1);
+    const prevRowOffset = y * (width + 1);
+    for (let x = 0; x < width; x++) {
+      rowSum += gray[y * width + x];
+      integral[rowOffset + x + 1] = integral[prevRowOffset + x + 1] + rowSum;
     }
   }
-  return threshold;
-}
 
-function binarize(imageData, gray, threshold) {
-  const { data } = imageData;
-  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    const v = gray[p] > threshold ? 255 : 0;
-    data[i] = data[i + 1] = data[i + 2] = v;
+  const out = new Uint8ClampedArray(width * height);
+  for (let y = 0; y < height; y++) {
+    const y1 = Math.max(0, y - half);
+    const y2 = Math.min(height - 1, y + half);
+    for (let x = 0; x < width; x++) {
+      const x1 = Math.max(0, x - half);
+      const x2 = Math.min(width - 1, x + half);
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const sum =
+        integral[(y2 + 1) * (width + 1) + (x2 + 1)] -
+        integral[y1 * (width + 1) + (x2 + 1)] -
+        integral[(y2 + 1) * (width + 1) + x1] +
+        integral[y1 * (width + 1) + x1];
+      const localMean = sum / count;
+      const px = gray[y * width + x];
+      out[y * width + x] = px < localMean * (1 - darknessMargin) ? 0 : 255;
+    }
   }
+  return out;
 }
 
 function parseIdCardText(rawText) {
