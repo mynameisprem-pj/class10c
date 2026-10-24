@@ -43,7 +43,3 @@ Set these in your Vercel Project Settings:
 Built by **Prem Jha** ([@mynameisprem-pj](https://github.com/mynameisprem-pj)) for Class X-C.
 
 ---
-
-## 📄 License
-
-Distributed under the [MIT License](LICENSE).
